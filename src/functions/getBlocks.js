@@ -15,12 +15,15 @@ app.http("getBlocks", {
     const logPrefix = "getBlocks";
     const statusArray = [];
     const validStatus = ["pending", "active", "expired"];
+
     try {
       // Check if status is a comma separated string
       if (status.includes(",")) {
         logger.info("{logPrefix} - Status is a comma separated string", logPrefix);
+
         // Split the string into an array
         const stringToArray = status.split(",");
+
         // Check if the array contains valid status
         stringToArray.forEach((status) => {
           if (!validStatus.includes(status)) {
@@ -28,18 +31,21 @@ app.http("getBlocks", {
             throw new Error("Invalid status provided");
           }
         });
+
         // Loop through the array and push each value to the statusArray
         stringToArray.forEach((status) => {
           statusArray.push(status);
         });
       } else {
         logger.info("{logPrefix} - Status is not a comma separated string", logPrefix);
+
         // If status is not a comma separated string, push the value to the statusArray
         // Check if the status is valid
         if (!validStatus.includes(status)) {
           logger.error("{logPrefix} - Invalid status provided", logPrefix);
           return { status: 400, body: "Invalid status provided" };
         }
+
         statusArray.push(status);
       }
     } catch (error) {
@@ -50,8 +56,10 @@ app.http("getBlocks", {
     try {
       // Connect to the database
       const mongoClient = await getMongoClient();
+
       // Find all blocks with status in the statusArray and teacher upn
       logger.info("{logPrefix} - Fetching blocks with status: {Status}", logPrefix, statusArray);
+
       /**
        * Filter object used to query blocks based on status and teacher's user principal name.
        *
@@ -68,9 +76,11 @@ app.http("getBlocks", {
         "teacher.userPrincipalName": upn !== "null" ? upn : { $exists: true },
         "teacher.officeLocation": school !== "null" ? school : { $exists: true }
       };
+
       // Fetch the blocks
       const response = await mongoClient.db(mongoDB.dbName).collection(mongoDB.blocksCollection).find(filter).toArray();
       logger.info("{logPrefix} - Blocks fetched, found: {BlockCount}", logPrefix, response.length);
+
       // Return the response
       return { status: 200, jsonBody: response };
     } catch (error) {

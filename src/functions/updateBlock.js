@@ -11,9 +11,11 @@ app.http("updateBlock", {
   route: "updateBlock",
   handler: async (request, _context) => {
     const body = await request.json();
+
     const logPrefix = "submitBlock";
     let response = null;
     let lastItem = null;
+
     // const removeGroupMembersResponse = null
     let isChanged = false;
 
@@ -21,6 +23,7 @@ app.http("updateBlock", {
       logger.error("{logPrefix} - Invalid request, no updated array provided", logPrefix);
       return { status: 400, body: "Invalid request, no updated array provided" };
     }
+
     // Get the last item in the updated array
     lastItem = body.updated[body.updated.length - 1];
     response = {
@@ -39,6 +42,7 @@ app.http("updateBlock", {
       if (lastItem.studentsToRemove.length > 0) {
         // Remove members from the array of students
         logger.info("{logPrefix} - Number of students to remove: {StudentsToRemoveCount}", logPrefix, lastItem.studentsToRemove.length);
+
         for (const studentsToRemove of lastItem.studentsToRemove) {
           logger.info("{logPrefix} - Removing student {StudentId} from block", logPrefix, studentsToRemove.id);
           const groupId = await body.typeBlock.groupId;
@@ -48,6 +52,7 @@ app.http("updateBlock", {
             .collection(mongoDB.blocksCollection)
             .updateOne({ _id: id }, { $pull: { students: { id: studentsToRemove.id } } });
         }
+
         isChanged = true;
       }
       // if(lastItem.studentsToRemove.length > 0 && await body.status === 'active'){
@@ -57,9 +62,11 @@ app.http("updateBlock", {
       //     removeGroupMembersResponse = await removeGroupMembers(groupId, lastItem.studentsToRemove)
       //     isChanged = true
       // }
+
       // If the status is pending, add the members to the array of students
       if (lastItem.studentsToAdd.length > 0 && (await body.status) === "pending") {
         logger.info("{logPrefix} - Number of students to add: {StudentsToAddCount}", logPrefix, lastItem.studentsToAdd.length);
+
         for (const studentsToAdd of lastItem.studentsToAdd) {
           logger.info("{logPrefix} - Adding student {StudentId} to block", logPrefix, studentsToAdd.id);
           await mongoClient
@@ -67,6 +74,7 @@ app.http("updateBlock", {
             .collection(mongoDB.blocksCollection)
             .updateOne({ _id: id }, { $push: { students: studentsToAdd } });
         }
+
         isChanged = true;
       }
 
@@ -76,25 +84,31 @@ app.http("updateBlock", {
           // If the new type is different from the old type, update the type
           logger.info("{logPrefix} - Block type has changed, updating groupId and type", logPrefix);
           logger.info("{logPrefix} - New block type is {BlockType}", logPrefix, lastItem.typeBlockChange.newType);
+
           // Get the block types from the config file
           let groupId = null;
           if (lastItem.typeBlockChange.newType === "eksamen") {
             groupId = blockGroup.eksamenID;
           }
+
           if (lastItem.typeBlockChange.newType === "fullBlock") {
             groupId = blockGroup.offlineID;
           }
+
           if (lastItem.typeBlockChange.newType === "formsFile") {
             groupId = blockGroup.formsFile;
           }
+
           if (lastItem.typeBlockChange.newType === "forms") {
             groupId = blockGroup.forms;
           }
+
           await mongoClient
             .db(mongoDB.dbName)
             .collection(mongoDB.blocksCollection)
             .updateOne({ _id: id }, { $set: { "typeBlock.type": lastItem.typeBlockChange.newType, "typeBlock.groupId": groupId } });
           logger.info("{logPrefix} - Block type updated", logPrefix);
+
           isChanged = true;
         }
       }
@@ -102,25 +116,31 @@ app.http("updateBlock", {
       if (lastItem.dateBlockChange?.start?.new !== undefined && (await body.status) === "pending") {
         // If the date of the block has changed, update the startBlock time
         logger.info("{logPrefix} - Block start date has changed, updating startBlock", logPrefix);
+
         await mongoClient
           .db(mongoDB.dbName)
           .collection(mongoDB.blocksCollection)
           .updateOne({ _id: id }, { $set: { startBlock: lastItem.dateBlockChange.start.new } });
+
         isChanged = true;
       }
+
       if (lastItem.dateBlockChange?.end.new !== undefined) {
         // If the date of the block has changed, update the endBlock time
         logger.info("{logPrefix} - Block end date has changed, updating endBlock", logPrefix);
+
         await mongoClient
           .db(mongoDB.dbName)
           .collection(mongoDB.blocksCollection)
           .updateOne({ _id: id }, { $set: { endBlock: lastItem.dateBlockChange.end.new } });
+
         isChanged = true;
       }
 
       // If any changes have been made, push the last item of the updated array to the database
       if (isChanged) {
         logger.info("{logPrefix} - Pushing the last item of the updated array to the database", logPrefix);
+
         await mongoClient
           .db(mongoDB.dbName)
           .collection(mongoDB.blocksCollection)

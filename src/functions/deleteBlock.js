@@ -18,6 +18,7 @@ app.http("deleteBlock", {
 
     // Connect to the database
     const mongoClient = await getMongoClient();
+
     try {
       // Find the block with the provided id
       const block = await mongoClient

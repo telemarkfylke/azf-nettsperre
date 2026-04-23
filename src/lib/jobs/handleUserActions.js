@@ -22,6 +22,7 @@ const { formatDate } = require("../formatDate.js");
  */
 const handleUserActions = async (action) => {
   const logPrefix = "handleUserActions";
+
   logger.info("{logPrefix} - Action: {Action}", logPrefix, action);
 
   // Connect to the database
@@ -39,6 +40,7 @@ const handleUserActions = async (action) => {
   if (action === "activate") {
     // Find any blocks with the start date less than or equal to the current date
     logger.info("{logPrefix} - Finding blocks with start date less than or equal to current date - {Date}", logPrefix, dateLocalFormat);
+
     const blocks = await mongoClient
       .db(mongoDB.dbName)
       .collection(mongoDB.blocksCollection)
@@ -50,6 +52,7 @@ const handleUserActions = async (action) => {
     if (blocks.length < 1) {
       return { status: 200, jsonBody: `No blocks to ${action}` };
     }
+
     // Loop through the blocks that are found
     for (const block of blocks) {
       try {
@@ -58,58 +61,72 @@ const handleUserActions = async (action) => {
           logger.info("{logPrefix} - Found more than 1 block to {Action}, delaying the activation of the next block by 1 second", logPrefix, action);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
+
         // Add the students to the group
         logger.info("{logPrefix} - Adding {StudentCount} students to group: {GroupId}", logPrefix, block.students.length, block.typeBlock.groupId);
         await addGroupMembers(block.typeBlock.groupId, block.students);
+
         // Create stats
         await createStatistics(block, action);
       } catch (error) {
         logger.errorException(error, "{logPrefix} - Error adding members to group", logPrefix);
       }
+
       // Update the status of the block to active/expired
       await mongoClient
         .db(mongoDB.dbName)
         .collection(mongoDB.blocksCollection)
         .updateOne({ _id: block._id }, { $set: { status: "active" } });
+
       blockObj.blocksAdded.push(block);
     }
-  } else {
-    // Find any blocks with the start date less than or equal to the current date
-    logger.info("{logPrefix} - Finding blocks with start date less than or equal to current date - {Date}", logPrefix, dateLocalFormat);
-    const blocks = await mongoClient
+
+    return { status: 200, jsonBody: blockObj };
+  }
+
+  // Find any blocks with the start date less than or equal to the current date
+  logger.info("{logPrefix} - Finding blocks with start date less than or equal to current date - {Date}", logPrefix, dateLocalFormat);
+
+  const blocks = await mongoClient
+    .db(mongoDB.dbName)
+    .collection(mongoDB.blocksCollection)
+    .find({ status: blockStatus, endBlock: { $lte: dateLocalFormat } })
+    .toArray();
+
+  logger.info("{logPrefix} - Found {BlockCount} blocks", logPrefix, blocks.length);
+
+  // If there are no blocks, return
+  if (blocks.length < 1) {
+    return { status: 200, jsonBody: `No blocks to ${action}` };
+  }
+
+  // Loop through the blocks that are found
+  for (const block of blocks) {
+    try {
+      // If there's more than one block to deactivate, delay the deactivation of the next block by 1 seconds
+      if (blocks.length > 1) {
+        logger.info("{logPrefix} - Found more than 1 block to {Action}, delaying the deactivation of the next block by 1 second", logPrefix, action);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      logger.info("{logPrefix} - Removing {StudentCount} students from group: {GroupId}", logPrefix, block.students.length, block.typeBlock.groupId);
+      await removeGroupMembers(block.typeBlock.groupId, block.students);
+
+      // Create stats
+      await createStatistics(block, action);
+    } catch (error) {
+      logger.errorException(error, "{logPrefix} - Error removing members from group", logPrefix);
+    }
+
+    // Update the status of the block to active/expired
+    await mongoClient
       .db(mongoDB.dbName)
       .collection(mongoDB.blocksCollection)
-      .find({ status: blockStatus, endBlock: { $lte: dateLocalFormat } })
-      .toArray();
-    logger.info("{logPrefix} - Found {BlockCount} blocks", logPrefix, blocks.length);
+      .updateOne({ _id: block._id }, { $set: { status: "expired" } });
 
-    // If there are no blocks, return
-    if (blocks.length < 1) {
-      return { status: 200, jsonBody: `No blocks to ${action}` };
-    }
-    // Loop through the blocks that are found
-    for (const block of blocks) {
-      try {
-        // If there's more than one block to deactivate, delay the deactivation of the next block by 1 seconds
-        if (blocks.length > 1) {
-          logger.info("{logPrefix} - Found more than 1 block to {Action}, delaying the deactivation of the next block by 1 second", logPrefix, action);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-        logger.info("{logPrefix} - Removing {StudentCount} students from group: {GroupId}", logPrefix, block.students.length, block.typeBlock.groupId);
-        await removeGroupMembers(block.typeBlock.groupId, block.students);
-        // Create stats
-        await createStatistics(block, action);
-      } catch (error) {
-        logger.errorException(error, "{logPrefix} - Error removing members from group", logPrefix);
-      }
-      // Update the status of the block to active/expired
-      await mongoClient
-        .db(mongoDB.dbName)
-        .collection(mongoDB.blocksCollection)
-        .updateOne({ _id: block._id }, { $set: { status: "expired" } });
-      blockObj.blocksRemoved.push(block);
-    }
+    blockObj.blocksRemoved.push(block);
   }
+
   return { status: 200, jsonBody: blockObj };
 };
 

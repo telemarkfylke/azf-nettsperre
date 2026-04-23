@@ -8,6 +8,7 @@ app.http("extendedUserInfo", {
   route: "extendedUserInfo/{upn}",
   handler: async (request, _context) => {
     const upn = request.params.upn;
+
     try {
       const userInfo = await getUser(upn);
       return { status: 200, jsonBody: userInfo };

@@ -15,6 +15,7 @@ app.http("validatePermission", {
 
     // Skip if requestor is in the allowed list
     let skipValidation = false;
+
     // Get requestor and teacher to be edited info
     const requestorInfo = await getUser(body.requestorUPN);
     const teacherToBeEditedInfo = await getUser(body.teacherToBeEditedUPN);
@@ -37,20 +38,24 @@ app.http("validatePermission", {
       logData.validationMsg = "Requestor is a part of the allowed companies, skipping validation";
       skipValidation = true;
     }
+
     // If requestor is not in the allowed list, perform validation
     if (!skipValidation) {
       logger.info("{logPrefix} - Requestor is not a part of the allowed companies, performing validation", logPrefix);
+
       // Check if requestor and teacher to be edited are in the same office location
       if (requestorInfo.officeLocation !== teacherToBeEditedInfo.officeLocation) {
         logData.skipValidation = false;
         logData.validationMsg = "Validation failed, requestor and teacher to be edited are not in the same location";
         logger.error("{logPrefix} - Requestor and teacher to be edited are not in the same location", logPrefix);
+
         try {
           await createLogEntry(logData);
         } catch (error) {
           logger.errorException(error, "{logPrefix}", logPrefix);
           return { status: 500, body: "Internal Server Error" };
         }
+
         return { status: 403, body: "Forbidden" };
       } else {
         // If requestor and teacher to be edited are in the same office location, log the validation result.
@@ -61,6 +66,7 @@ app.http("validatePermission", {
 
     // Log validation result
     logger.info("{logPrefix} - Validation successful, creating log entry", logPrefix);
+
     try {
       await createLogEntry(logData);
     } catch (error) {
