@@ -1,8 +1,8 @@
-const { MongoClient } = require('mongodb')
-const { mongoDB } = require('../../../config.js')
-const { logger } = require('@vtfk/logger')
+const { MongoClient } = require("mongodb");
+const { mongoDB } = require("../../../config.js");
+const { logger } = require("@vtfk/logger");
 
-let client = null
+let client = null;
 
 /**
  *
@@ -10,16 +10,16 @@ let client = null
  */
 const getMongoClient = async () => {
   if (!client) {
-    logger('info', ['mongo-client', 'Client does not exist - creating'])
-    client = new MongoClient(mongoDB.connectionString)
-    logger('info', ['mongo-client', 'Client connected'])
+    logger("info", ["mongo-client", "Client does not exist - creating"]);
+    client = new MongoClient(mongoDB.connectionString);
+    logger("info", ["mongo-client", "Client connected"]);
   }
-  return client
-}
+  return client;
+};
 
 const closeMongoClient = () => {
-  if (client) client.close()
-  client = null
-}
+  if (client) client.close();
+  client = null;
+};
 
-module.exports = { getMongoClient, closeMongoClient }
+module.exports = { getMongoClient, closeMongoClient };
