@@ -159,8 +159,16 @@ const removeGroupMembers = async (groupId, members) => {
       membersRemoved.success.push(memberInfo);
     } catch (error) {
       // Avoid logging ResourceNotFound errors as they are expected when the member is not in the group
-      // TODO: This needs to be changed
-      if (error?.response?.data?.error?.code === "Request_ResourceNotFound") {
+      // TODO: Change this to not error log when code === "Request_ResourceNotFound"
+      logger.errorException(
+        error,
+        "{logPrefix} - Failed to remove member with id {MemberId} from group with id {GroupId}. Member was probably already removed from the group but Microsoft was to slow to update the group members.",
+        logPrefix,
+        member.id,
+        groupId
+      );
+
+      /*if (error?.response?.data?.error?.code === "Request_ResourceNotFound") {
         logger.info("{logPrefix} - Member with id {MemberId} was not found in group with id {GroupId}", logPrefix, member.id, groupId);
       } else {
         logger.warn(
@@ -169,10 +177,10 @@ const removeGroupMembers = async (groupId, members) => {
           member.id,
           groupId
         );
-      }
+      }*/
 
       membersRemoved.membersRemoved++;
-      memberInfo.error = error?.response?.data?.error || error; // TODO: This needs to be changed
+      memberInfo.error = error;
       membersRemoved.failed.push(memberInfo);
     }
   }
@@ -260,7 +268,7 @@ const addGroupMembers = async (groupId, members) => {
 
       membersAdded.failedNumber++;
       membersAdded.failed.push({
-        error: error?.response?.data?.error || error // TODO: This needs to be changed
+        error: error
       });
     }
   }
@@ -280,10 +288,10 @@ const addGroupMembers = async (groupId, members) => {
   //         membersAdded.membersAdded++
   //         membersAdded.success.push(memberInfo)
   //     } catch (error) {
-  //         console.error(error?.response?.data?.error || error) // TODO: This needs to be changed
+  //         console.error(error)
   //         logger.errorException(error, "{logPrefix} - Failed to add member with id {MemberId} to group with id {GroupId}", logPrefix, member.id, groupId)
   //         membersAdded.failedNumber++
-  //         memberInfo.error = (error?.response?.data?.error || error) // TODO: This needs to be changed
+  //         memberInfo.error = error
   //         membersAdded.failed.push(memberInfo)
   //     }
   // }
