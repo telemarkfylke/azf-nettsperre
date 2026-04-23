@@ -15,7 +15,7 @@ const getOwnedObjects = async (upn) => {
   // Input validation
   if (!upn) throw new Error("Cannot search for a user if 'upn' is not specified");
   const url = `https://graph.microsoft.com/v1.0/users/${upn}/ownedObjects?$select=id,displayName,mail,description`;
-  let data = await graphRequest(url, "GET", "null");
+  let data = await graphRequest(url, "GET");
 
   // Clean up the response
   if (data?.value) data = data.value;
@@ -56,7 +56,7 @@ const getGroupMembers = async (groupId, onlyStudents = "") => {
   };
   let data;
   while (!finished) {
-    data = await graphRequest(url, "GET", "null", "eventual");
+    data = await graphRequest(url, "GET", undefined, "eventual");
     finished = data["@odata.nextLink"] === undefined;
     url = data["@odata.nextLink"];
     result.value = result.value.concat(data.value);
@@ -119,7 +119,7 @@ const removeGroupMembers = async (groupId, members) => {
     membersRemoved.total++;
     const url = `https://graph.microsoft.com/v1.0/groups/${groupId}/members/${member.id}/$ref`;
     try {
-      await graphRequest(url, "DELETE", "null");
+      await graphRequest(url, "DELETE");
       logger("info", [logPrefix, `Removed member with id ${member.id} from group with id ${groupId}`]);
       membersRemoved.membersRemoved++;
       membersRemoved.success.push(memberInfo);

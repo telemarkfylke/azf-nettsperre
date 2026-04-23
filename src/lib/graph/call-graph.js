@@ -1,34 +1,44 @@
-const axios = require("axios");
+const { logger } = require("@vtfk/logger")
 const getMsalToken = require("../auth/get-endtraid-token.js");
+
 // Calls the MS Graph API and returns the data
 /**
  *
  * @param {string} url
  * @param {string} method
- * @param {object} data
+ * @param {object} [data]
  * @param {string} [consistencyLevel]
  * @returns {Promise<any>}
  */
-const graphRequest = async (url, method, data, consistencyLevel = undefined) => {
+const graphRequest = async (url, method, data = undefined, consistencyLevel = undefined) => {
   // Get access token
   const accessToken = await getMsalToken("https://graph.microsoft.com/.default");
-  // Build the request with data from the call
+  
   const options = {
-    method,
-    url,
+    method: method.toUpperCase(),
     headers: {
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`
     }
   };
-  // Add data to the request if it exists
-  if (data) options.data = data;
-  // Add consistency level to the request if it exists
-  if (consistencyLevel) options.headers.ConsistencyLevel = consistencyLevel;
-  // Make the request
-  const response = await axios(options);
-  // Return the data
-  return response.data;
+
+  if (consistencyLevel) {
+    options.headers.ConsistencyLevel = consistencyLevel;
+  }
+
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, options)
+
+  if (!response.ok) {
+    const error = await response.json();
+    logger("error", [`Failed to make ${method} request to graph. Status: ${response.status}, StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`]);
+    throw new Error(`Failed to make ${method} request to graph. Status: ${response.status}, StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`);
+  }
+
+  return response.json();
 };
 
 module.exports = { graphRequest };
