@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
+const { logger } = require("@vestfoldfylke/loglady");
 const { misc } = require("../../config.js");
-const { logger } = require("@vtfk/logger");
 const { getUser } = require("../lib/graph/jobs/users.js");
 const { createLogEntry } = require("../lib/jobs/handleLogEntry.js");
 const { formatDate } = require("../lib/formatDate.js");
@@ -32,23 +32,23 @@ app.http("validatePermission", {
 
     // Check if requestor is in the allowed comma separated string
     if (misc.allowedCompanies.includes(requestorInfo.companyName)) {
-      logger("info", [logPrefix, "Requestor is a part of the allowed companies, skipping validation"]);
+      logger.info("{logPrefix} - Requestor is a part of the allowed companies, skipping validation", logPrefix);
       logData.skipValidation = true;
       logData.validationMsg = "Requestor is a part of the allowed companies, skipping validation";
       skipValidation = true;
     }
     // If requestor is not in the allowed list, perform validation
     if (!skipValidation) {
-      logger("info", [logPrefix, "Requestor is not a part of the allowed companies, performing validation"]);
+      logger.info("{logPrefix} - Requestor is not a part of the allowed companies, performing validation", logPrefix);
       // Check if requestor and teacher to be edited are in the same office location
       if (requestorInfo.officeLocation !== teacherToBeEditedInfo.officeLocation) {
         logData.skipValidation = false;
         logData.validationMsg = "Validation failed, requestor and teacher to be edited are not in the same location";
-        logger("error", [logPrefix, "Requestor and teacher to be edited are not in the same location"]);
+        logger.error("{logPrefix} - Requestor and teacher to be edited are not in the same location", logPrefix);
         try {
           await createLogEntry(logData);
         } catch (error) {
-          logger("error", [logPrefix, error]);
+          logger.errorException(error, "{logPrefix}", logPrefix);
           return { status: 500, body: "Internal Server Error" };
         }
         return { status: 403, body: "Forbidden" };
@@ -60,11 +60,11 @@ app.http("validatePermission", {
     }
 
     // Log validation result
-    logger("info", [logPrefix, "Validation successful, creating log entry"]);
+    logger.info("{logPrefix} - Validation successful, creating log entry", logPrefix);
     try {
       await createLogEntry(logData);
     } catch (error) {
-      logger("error", [logPrefix, error]);
+      logger.errorException(error, "{logPrefix}", logPrefix);
       return { status: 500, body: "Internal Server Error" };
     }
 

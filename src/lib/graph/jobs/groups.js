@@ -1,6 +1,6 @@
+const { logger } = require("@vestfoldfylke/loglady");
 const { graphRequest } = require("../call-graph.js");
 const { misc } = require("../../../../config.js");
-const { logger } = require("@vtfk/logger");
 
 /**
  * Retrieves the list of directory objects owned by a user, filters out non-SDS teams and expired resources.
@@ -22,15 +22,15 @@ const getOwnedObjects = async (upn) => {
 
   // Return only school teams.
   // Filter out any resources that is not an SDS team
-  logger("info", [logPrefix, `Removing any resources that is not an SDS team for user with upn ${upn}`]);
+  logger.info("{logPrefix} - Removing any resources that is not an SDS team for user with upn {Upn}", logPrefix, upn);
   // Filter out any resources that is not a school team, kopi0624 or section_. Kopi0624 is a quick fix for this school year.
   data = data.filter((object) => object.mail && (object.mail.toLowerCase().startsWith("section_") || object.mail.toLowerCase().startsWith("kopi0624")));
   // Filter out any resources that is expired
-  logger("info", [logPrefix, `Removing any expired resources for user with upn ${upn}`]);
+  logger.info("{logPrefix} - Removing any expired resources for user with upn {Upn}", logPrefix, upn);
   data = data.filter((object) => !object.displayName.toLowerCase().startsWith("exp"));
 
   // Return the teams
-  logger("info", [logPrefix, `Found ${data.length} teams for user with upn ${upn}`]);
+  logger.info("{logPrefix} - Found {TeamsCount} teams for user with upn {Upn}", logPrefix, data.length, upn);
 
   return data;
 };
@@ -67,12 +67,12 @@ const getGroupMembers = async (groupId, onlyStudents = "") => {
   if (result?.value) data = result.value;
   if (onlyStudents === "true") {
     // Filter out any resources that is not a student
-    logger("info", [logPrefix, `Removing any resources that is not a student for group with id ${groupId}`]);
+    logger.info("{logPrefix} - Removing any resources that is not a student for group with id {GroupId}", logPrefix, groupId);
     data = data.filter((member) => member.userPrincipalName?.toLowerCase().endsWith(`@skole.${misc.email_domain}`));
   }
 
   // Return the members
-  logger("info", [logPrefix, `Found ${data.length} members in group with id ${groupId}`]);
+  logger.info("{logPrefix} - Found {MemberCount} members in group with id {GroupId}", logPrefix, data.length, groupId);
 
   return data;
 };
@@ -106,10 +106,10 @@ const removeGroupMembers = async (groupId, members) => {
   const currentMemberIds = currentMembers.map((member) => member.id);
   members = members.filter((member) => currentMemberIds.includes(member.id));
   if (members.length === 0) {
-    logger("info", [logPrefix, `No members to removed found in group with id ${groupId}`]);
+    logger.info("{logPrefix} - No members to remove found in group with id {GroupId}", logPrefix, groupId);
     return membersRemoved;
   }
-  logger("info", [logPrefix, `Found ${members.length} members to remove from the group with id ${groupId}`]);
+  logger.info("{logPrefix} - Found {MemberCount} members to remove from the group with id {GroupId}", logPrefix, members.length, groupId);
   for (const member of members) {
     const memberInfo = {
       memberID: member.id,
@@ -120,20 +120,20 @@ const removeGroupMembers = async (groupId, members) => {
     const url = `https://graph.microsoft.com/v1.0/groups/${groupId}/members/${member.id}/$ref`;
     try {
       await graphRequest(url, "DELETE");
-      logger("info", [logPrefix, `Removed member with id ${member.id} from group with id ${groupId}`]);
+      logger.info("{logPrefix} - Removed member with id {MemberId} from group with id {GroupId}", logPrefix, member.id, groupId);
       membersRemoved.membersRemoved++;
       membersRemoved.success.push(memberInfo);
     } catch (error) {
       // Avoid logging ResourceNotFound errors as they are expected when the member is not in the group
       if (error?.response?.data?.error?.code === "Request_ResourceNotFound") {
-        logger("info", [logPrefix, `Member with id ${member.id} was not found in group with id ${groupId}`]);
+        logger.info("{logPrefix} - Member with id {MemberId} was not found in group with id {GroupId}", logPrefix, member.id, groupId);
       } else {
-        logger("warn", [
+        logger.warn(
+          "{logPrefix} - Failed to remove member with id {MemberId} from group with id {GroupId}. Member was probably already removed from the group but Microsoft was to slow to update the group members.",
           logPrefix,
-          `Failed to remove member with id ${member.id} from group with id ${groupId}`,
-          "Member was probably already removed from the group but Microsoft was to slow to update the group members.",
-          error?.response?.data?.error || error
-        ]);
+          member.id,
+          groupId
+        );
       }
       membersRemoved.membersRemoved++;
       memberInfo.error = error?.response?.data?.error || error;
@@ -172,7 +172,7 @@ const addGroupMembers = async (groupId, members) => {
   const currentMembers = await getGroupMembers(groupId);
   const currentMemberIds = currentMembers.map((member) => member.id);
   members = members.filter((member) => !currentMemberIds.includes(member.id));
-  logger("info", [logPrefix, `Found ${members.length} members to add to group with id ${groupId}`]);
+  logger.info("{logPrefix} - Found {MemberCount} members to add to group with id {GroupId}", logPrefix, members.length, groupId);
 
   // Bulk add members to the group
   const url = `https://graph.microsoft.com/v1.0/groups/${groupId}`;
@@ -191,12 +191,23 @@ const addGroupMembers = async (groupId, members) => {
     };
     try {
       await graphRequest(url, "PATCH", body);
-      logger("info", [logPrefix, `Added ${chunk.length} members to group with id ${groupId}. Members added: ${chunk.map((member) => member.id).join(", ")}`]);
+      logger.info(
+        "{logPrefix} - Added {MemberCount} members to group with id {GroupId}. Members added: {@MemberIds}",
+        logPrefix,
+        chunk.length,
+        groupId,
+        chunk.map((member) => member.id)
+      );
       membersAdded.membersAdded += chunk.length;
       membersAdded.success.push(...chunk.map((member) => ({ memberID: member.id, groupID: groupId })));
     } catch (error) {
       console.error(error?.response?.data?.error || error);
-      logger("warn", [logPrefix, `Failed to add members with ids ${chunk.map((member) => member.id).join(", ")} to group with id ${groupId}`, error?.response?.data?.error || error]);
+      logger.warn(
+        "{logPrefix} - Failed to add members with ids {@MemberIds} to group with id {GroupId}",
+        logPrefix,
+        chunk.map((member) => member.id),
+        groupId
+      );
       membersAdded.failedNumber++;
       membersAdded.failed.push({
         error: error?.response?.data?.error || error
@@ -214,12 +225,12 @@ const addGroupMembers = async (groupId, members) => {
   //     const url = `https://graph.microsoft.com/v1.0/groups/${groupId}/members/$ref` // Single member
   //     try {
   //         const request = await graphRequest(url, 'POST', { '@odata.id': `https://graph.microsoft.com/v1.0/directoryObjects/${member.id}` })
-  //         logger('info', [logPrefix, `Added member with id ${member.id} to group with id ${groupId}`])
+  //         logger.info("{logPrefix} - Added member with id {MemberId} to group with id {GroupId}", logPrefix, member.id, groupId)
   //         membersAdded.membersAdded++
   //         membersAdded.success.push(memberInfo)
   //     } catch (error) {
   //         console.error(error?.response?.data?.error || error)
-  //         logger('WARN', [logPrefix, `Failed to add member with id ${member.id} to group with id ${groupId}`, error?.response?.data?.error || error])
+  //         logger.errorException(error, "{logPrefix} - Failed to add member with id {MemberId} to group with id {GroupId}", logPrefix, member.id, groupId)
   //         membersAdded.failedNumber++
   //         memberInfo.error = (error?.response?.data?.error || error)
   //         membersAdded.failed.push(memberInfo)

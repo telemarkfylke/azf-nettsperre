@@ -1,5 +1,5 @@
+const { logger } = require("@vestfoldfylke/loglady");
 const { statistics } = require("../../../config.js");
-const { logger } = require("@vtfk/logger");
 const { getUser } = require("../graph/jobs/users.js");
 
 /**
@@ -21,7 +21,7 @@ const { getUser } = require("../graph/jobs/users.js");
  */
 const createStatistics = async (block, action) => {
   const logPrefix = "createStatistics";
-  logger("info", [logPrefix, `Creating statistics for block: ${block._id}`]);
+  logger.info("{logPrefix} - Creating statistics for block: {BlockId}", logPrefix, block._id);
 
   // Get info about the teacher who owns the team
   const teamOwner = await getUser(block.teacher.userPrincipalName);
@@ -43,7 +43,7 @@ const createStatistics = async (block, action) => {
     createdByDepartment: createdBy.officeLocation,
     numberOfStudents: block.students.length,
     timesBlockWasUpdated: block.updated.length
-  }
+  };
 
   const response = await fetch(`${statistics.url}/stats`, {
     method: "POST",
@@ -52,11 +52,11 @@ const createStatistics = async (block, action) => {
       "X-Functions-Key": statistics.key
     },
     body: JSON.stringify(payload)
-  })
+  });
 
   if (!response.ok) {
     const error = await response.json();
-    logger("error", [`Failed to POST statistics update. Status: ${response.status}, StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`]);
+    logger.errorException(error, "Failed to POST statistics update. Status: {Status}, StatusText: {StatusText}", response.status, response.statusText);
     throw new Error(`Failed to POST statistics update. Status: ${response.status}, StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`);
   }
 
@@ -68,15 +68,15 @@ const createStatistics = async (block, action) => {
     }
 
     if (responseData.length > 1) {
-      logger("error", [logPrefix, "Was not able to create statistics"]);
+      logger.error("{logPrefix} - Was not able to create statistics", logPrefix);
       throw new Error("Was not able to create statistics");
     }
 
-    logger("info", [logPrefix, `Statistics created for block: ${block._id}`]);
+    logger.info("{logPrefix} - Statistics created for block: {BlockId}", logPrefix, block._id);
     return responseData[0];
   }
 
-  logger("info", [logPrefix, `Statistics created for block: ${block._id}`]);
+  logger.info("{logPrefix} - Statistics created for block: {BlockId}", logPrefix, block._id);
   return responseData;
 };
 

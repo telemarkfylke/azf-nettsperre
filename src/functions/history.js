@@ -1,7 +1,7 @@
 const { app } = require("@azure/functions");
+const { logger } = require("@vestfoldfylke/loglady");
 const { getMongoClient } = require("../lib/auth/mongoClient.js");
 const { mongoDB } = require("../../config.js");
-const { logger } = require("@vtfk/logger");
 
 app.http("history", {
   methods: ["GET"],
@@ -26,7 +26,7 @@ app.http("history", {
     }
     try {
       const mongoClient = await getMongoClient();
-      logger("info", [logPrefix, "Filter applied, making the query"]);
+      logger.info("{logPrefix} - Filter applied, making the query", logPrefix);
       const response = await mongoClient
         .db(mongoDB.dbName)
         .collection(mongoDB.historyCollection)
@@ -34,7 +34,7 @@ app.http("history", {
         .toArray();
       return { status: 200, jsonBody: response };
     } catch (error) {
-      logger("error", [logPrefix, `Error fetching history: ${error}`]);
+      logger.errorException(error, "{logPrefix} - Error fetching history", logPrefix);
       return { status: 400, jsonBody: error.message };
     }
   }

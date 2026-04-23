@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
+const { logger } = require("@vestfoldfylke/loglady");
 const { misc, mongoDB } = require("../../config.js");
-const { logger } = require("@vtfk/logger");
 const { handleUserActions } = require("../lib/jobs/handleUserActions.js");
 const { moveDocuments } = require("../lib/jobs/moveDocuments.js");
 
@@ -20,7 +20,7 @@ app.http("deactivateBlock-dev", {
 
       return { status: 200, jsonBody: response };
     } catch (error) {
-      logger("error", [logPrefix, error]);
+      logger.errorException(error, "{logPrefix}", logPrefix);
       return { status: 400, body: error.message };
     }
   }

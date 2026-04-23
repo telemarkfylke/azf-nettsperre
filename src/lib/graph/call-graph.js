@@ -1,4 +1,4 @@
-const { logger } = require("@vtfk/logger")
+const { logger } = require("@vestfoldfylke/loglady");
 const getMsalToken = require("../auth/get-endtraid-token.js");
 
 // Calls the MS Graph API and returns the data
@@ -13,12 +13,12 @@ const getMsalToken = require("../auth/get-endtraid-token.js");
 const graphRequest = async (url, method, data = undefined, consistencyLevel = undefined) => {
   // Get access token
   const accessToken = await getMsalToken("https://graph.microsoft.com/.default");
-  
+
   const options = {
     method: method.toUpperCase(),
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     }
   };
 
@@ -30,11 +30,11 @@ const graphRequest = async (url, method, data = undefined, consistencyLevel = un
     options.body = JSON.stringify(data);
   }
 
-  const response = await fetch(url, options)
+  const response = await fetch(url, options);
 
   if (!response.ok) {
     const error = await response.json();
-    logger("error", [`Failed to make ${method} request to graph. Status: ${response.status}, StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`]);
+    logger.errorException(error, "Failed to make {Method} request to graph. Status: {Status}, StatusText: {StatusText}", method, response.status, response.statusText);
     throw new Error(`Failed to make ${method} request to graph. Status: ${response.status}, StatusText: ${response.statusText}. Error: ${JSON.stringify(error)}`);
   }
 

@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
+const { logger } = require("@vestfoldfylke/loglady");
 const { misc } = require("../../config.js");
-const { logger } = require("@vtfk/logger");
 const { handleUserActions } = require("../lib/jobs/handleUserActions.js");
 
 app.timer("activateBlocks", {
@@ -14,7 +14,7 @@ app.timer("activateBlocks", {
       const response = await handleUserActions("activate");
       return { status: 200, jsonBody: response };
     } catch (error) {
-      logger("error", [logPrefix, error]);
+      logger.errorException(error, "{logPrefix}", logPrefix);
       return { status: 400, body: error.message };
     }
   }

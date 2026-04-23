@@ -1,7 +1,7 @@
 const { app } = require("@azure/functions");
+const { logger } = require("@vestfoldfylke/loglady");
 const { getMongoClient } = require("../lib/auth/mongoClient.js");
 const { mongoDB } = require("../../config.js");
-const { logger } = require("@vtfk/logger");
 
 app.http("getBlocks", {
   methods: ["GET"],
@@ -18,13 +18,13 @@ app.http("getBlocks", {
     try {
       // Check if status is a comma separated string
       if (status.includes(",")) {
-        logger("info", [logPrefix, "Status is a comma separated string"]);
+        logger.info("{logPrefix} - Status is a comma separated string", logPrefix);
         // Split the string into an array
         const stringToArray = status.split(",");
         // Check if the array contains valid status
         stringToArray.forEach((status) => {
           if (!validStatus.includes(status)) {
-            logger("error", [logPrefix, "Invalid status provided"]);
+            logger.error("{logPrefix} - Invalid status provided", logPrefix);
             throw new Error("Invalid status provided");
           }
         });
@@ -33,17 +33,17 @@ app.http("getBlocks", {
           statusArray.push(status);
         });
       } else {
-        logger("info", [logPrefix, "Status is not a comma separated string"]);
+        logger.info("{logPrefix} - Status is not a comma separated string", logPrefix);
         // If status is not a comma separated string, push the value to the statusArray
         // Check if the status is valid
         if (!validStatus.includes(status)) {
-          logger("error", [logPrefix, "Invalid status provided"]);
+          logger.error("{logPrefix} - Invalid status provided", logPrefix);
           return { status: 400, body: "Invalid status provided" };
         }
         statusArray.push(status);
       }
     } catch (error) {
-      logger("error", [logPrefix, error]);
+      logger.errorException(error, "{logPrefix}", logPrefix);
       return { status: 400, body: error.message };
     }
 
@@ -51,7 +51,7 @@ app.http("getBlocks", {
       // Connect to the database
       const mongoClient = await getMongoClient();
       // Find all blocks with status in the statusArray and teacher upn
-      logger("info", [logPrefix, `Fetching blocks with status: ${statusArray}`]);
+      logger.info("{logPrefix} - Fetching blocks with status: {Status}", logPrefix, statusArray);
       /**
        * Filter object used to query blocks based on status and teacher's user principal name.
        *
@@ -70,11 +70,11 @@ app.http("getBlocks", {
       };
       // Fetch the blocks
       const response = await mongoClient.db(mongoDB.dbName).collection(mongoDB.blocksCollection).find(filter).toArray();
-      logger("info", [logPrefix, `Blocks fetched, found: ${response.length}`]);
+      logger.info("{logPrefix} - Blocks fetched, found: {BlockCount}", logPrefix, response.length);
       // Return the response
       return { status: 200, jsonBody: response };
     } catch (error) {
-      logger("error", [logPrefix, error]);
+      logger.errorException(error, "{logPrefix}", logPrefix);
       // Return the error
       return { status: 400, body: error.message };
     }
