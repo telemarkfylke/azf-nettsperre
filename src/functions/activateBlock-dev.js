@@ -1,6 +1,5 @@
 const { app } = require("@azure/functions");
-const { misc } = require("../../config.js");
-const { logger } = require("@vtfk/logger");
+const { logger } = require("@vestfoldfylke/loglady");
 const { handleUserActions } = require("../lib/jobs/handleUserActions.js");
 
 app.http("activateBlock-dev", {
@@ -9,12 +8,12 @@ app.http("activateBlock-dev", {
   route: "activateBlock-dev",
   handler: async (_request, _context) => {
     const logPrefix = "activateBlock-dev";
-    console.log(misc.email_domain);
+
     try {
       const response = await handleUserActions("activate");
       return { status: 200, jsonBody: response };
     } catch (error) {
-      logger("error", [logPrefix, error]);
+      logger.errorException(error, "{logPrefix}", logPrefix);
       return { status: 400, body: error.message };
     }
   }
