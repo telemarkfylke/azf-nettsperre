@@ -160,7 +160,6 @@ const removeGroupMembers = async (groupId, members) => {
       membersRemoved.success.push(memberInfo);
     } catch (error) {
       // Avoid logging ResourceNotFound errors as they are expected when the member is not in the group
-      // TODO: Change this to not error log when code === "Request_ResourceNotFound"
       if (error instanceof HTTPError && error.status === 404) {
         logger.info("{logPrefix} - Member with id {MemberId} was not found in group with id {GroupId}. Error: {@Error}", logPrefix, member.id, groupId, error);
       } else {
